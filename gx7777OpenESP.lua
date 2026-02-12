@@ -338,8 +338,7 @@ local function upd()
                     local str = C.name and p.Name or ""
                     if C.hp then
                         local currentHP = mathFloor(h.Health)
-                        local maxHP = mathFloor(h.MaxHealth)
-                        str = str .. (C.name and "\n" or "") .. currentHP .. "/" .. maxHP .. " HP"
+                        str = str .. (C.name and "\n" or "") .. currentHP .. " HP"
                     end
                     if C.distance then
                         str = str .. ((C.name or C.hp) and "\n" or "") .. mathFloor(mathSqrt(distSq) * 0.28) .. "m"
