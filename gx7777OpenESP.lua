@@ -57,7 +57,8 @@ local C = {
     team = false,
     tcolor = true,
     thick = 1,
-    menuLocked = false
+    menuLocked = false,
+    persist = true
 }
 
 local configFile = "esp_config.json"
@@ -71,6 +72,11 @@ if isfile(configFile) then
             end
         end
     end)
+end
+
+local minimized = false
+if loadedConfig and loadedConfig.minimized ~= nil then
+    minimized = loadedConfig.minimized
 end
 
 local O = {}
@@ -106,6 +112,7 @@ local function saveConfig(f)
     for k, v in pairs(C) do
         config[k] = v
     end
+    config.minimized = minimized
     config.positionXScale = f.Position.X.Scale
     config.positionXOffset = f.Position.X.Offset
     config.positionYScale = f.Position.Y.Scale
@@ -347,19 +354,18 @@ local function upd()
 end
 
 -- UI
-local minimized = false
 local function ui()
     local sg = InstanceNew("ScreenGui")
     sg.Name = "ESP_Panel_" .. math.random(10000, 999999)
     sg.ResetOnSpawn = false
     
     local f = InstanceNew("Frame")
-    f.Size = UDim2.new(0, 200, 0, 320)
+    f.Size = minimized and UDim2.new(0, 200, 0, 25) or UDim2.new(0, 200, 0, 320)
     f.Position = UDim2.new(0.02, 0, 0.35, 0)
     f.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     f.BorderSizePixel = 0
     f.Active = true
-    f.Draggable = true
+    f.Draggable = not C.menuLocked
     f.Parent = sg
     
     if loadedConfig then
@@ -388,9 +394,9 @@ local function ui()
     local lock = InstanceNew("TextButton")
     lock.Size = UDim2.new(0, 25, 0, 25)
     lock.Position = UDim2.new(1, -87, 0, 0)
-    lock.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+    lock.BackgroundColor3 = C.menuLocked and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(255, 165, 0)
     lock.BorderSizePixel = 0
-    lock.Text = "🔓"
+    lock.Text = C.menuLocked and "🔒" or "🔓"
     lock.TextColor3 = Color3.new(1,1,1)
     lock.TextSize = 14
     lock.Font = Enum.Font.GothamBold
@@ -403,7 +409,7 @@ local function ui()
     min.Position = UDim2.new(1, -57, 0, 0)
     min.BackgroundColor3 = Color3.fromRGB(0, 120, 180)
     min.BorderSizePixel = 0
-    min.Text = "_"
+    min.Text = minimized and "+" or "_"
     min.TextColor3 = Color3.new(1,1,1)
     min.TextSize = 16
     min.Font = Enum.Font.GothamBold
@@ -429,6 +435,7 @@ local function ui()
     c.Position = UDim2.new(0, 7, 0, 28)
     c.BackgroundTransparency = 1
     c.BorderSizePixel = 0
+    c.Visible = not minimized
     c.Parent = f
     
     local l = InstanceNew("UIListLayout")
@@ -440,6 +447,7 @@ local function ui()
         f.Draggable = not C.menuLocked
         lock.BackgroundColor3 = C.menuLocked and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(255, 165, 0)
         lock.Text = C.menuLocked and "🔒" or "🔓"
+        saveConfig(f)
     end)
     
     min.MouseButton1Click:Connect(function()
@@ -447,6 +455,7 @@ local function ui()
         c.Visible = not minimized
         f.Size = minimized and UDim2.new(0, 200, 0, 25) or UDim2.new(0, 200, 0, 320)
         min.Text = minimized and "+" or "_"
+        saveConfig(f)
     end)
     
     m.MouseButton1Click:Connect(function()
@@ -498,6 +507,7 @@ local function tog(p, txt, def, cb)
         b.Text = s and "ON" or "OFF"
         cb(s)
     end)
+    return b, s
 end
 
 local function sld(p, txt, min, max, def, cb)
@@ -558,16 +568,53 @@ end
 -- Init UI e toggles
 local content, panelFrame = ui()
 
-tog(content, "Enabled", C.on, function(v) C.on = v end)
-tog(content, "Box", C.box, function(v) C.box = v end)
-tog(content, "Skeleton", C.skel, function(v) C.skel = v end)
-tog(content, "Head Circle", C.head, function(v) C.head = v end)
-tog(content, "Name", C.name, function(v) C.name = v end)
-tog(content, "Health", C.hp, function(v) C.hp = v end)
-tog(content, "Distance", C.distance, function(v) C.distance = v end)
-tog(content, "Team Check", C.team, function(v) C.team = v end)
-tog(content, "Team Colors", C.tcolor, function(v) C.tcolor = v end)
-sld(content, "Max Distance", 500, 5000, C.dist, function(v) C.dist = v end)
+tog(content, "Enabled", C.on, function(v) 
+    C.on = v 
+    saveConfig(panelFrame)
+end)
+tog(content, "Box", C.box, function(v) 
+    C.box = v 
+    saveConfig(panelFrame)
+end)
+tog(content, "Skeleton", C.skel, function(v) 
+    C.skel = v 
+    saveConfig(panelFrame)
+end)
+tog(content, "Head Circle", C.head, function(v) 
+    C.head = v 
+    saveConfig(panelFrame)
+end)
+tog(content, "Name", C.name, function(v) 
+    C.name = v 
+    saveConfig(panelFrame)
+end)
+tog(content, "Health", C.hp, function(v) 
+    C.hp = v 
+    saveConfig(panelFrame)
+end)
+tog(content, "Distance", C.distance, function(v) 
+    C.distance = v 
+    saveConfig(panelFrame)
+end)
+tog(content, "Team Check", C.team, function(v) 
+    C.team = v 
+    saveConfig(panelFrame)
+end)
+tog(content, "Team Colors", C.tcolor, function(v) 
+    C.tcolor = v 
+    saveConfig(panelFrame)
+end)
+tog(content, "Persist on Rejoin", C.persist, function(v) 
+    C.persist = v 
+    if v then
+        queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/gx7-team/gx7777/main/gx7777OpenESP.lua", true))()')
+    end
+    saveConfig(panelFrame)
+end)
+sld(content, "Max Distance", 500, 5000, C.dist, function(v) 
+    C.dist = v 
+    saveConfig(panelFrame)
+end)
 sld(content, "Thickness", 1, 3, C.thick, function(v)
     C.thick = v
     for _, o in pairs(O) do
@@ -575,6 +622,7 @@ sld(content, "Thickness", 1, 3, C.thick, function(v)
         for _, l in pairs(o.s or {}) do l.Thickness = v end
         if o.h then o.h.Thickness = v end
     end
+    saveConfig(panelFrame)
 end)
 
 -- Botão para salvar configuração
@@ -623,5 +671,9 @@ LP.CharacterAdded:Connect(function()
         end
     end)
 end)
+
+if C.persist then
+    queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/gx7-team/gx7777/main/gx7777OpenESP.lua", true))()')
+end
 
 print("ESP carregado! Panel deve aparecer com toggles. Pressione X para fechar, RightShift para deletar.")
