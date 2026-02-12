@@ -40,6 +40,7 @@ local RS = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local Cam = workspace.CurrentCamera
 local LP = Plrs.LocalPlayer
+local HttpService = game:GetService("HttpService")
 
 local DrawingNew = Drawing.new
 local InstanceNew = Instance.new
@@ -58,6 +59,19 @@ local C = {
     thick = 1,
     menuLocked = false
 }
+
+local configFile = "esp_config.json"
+local loadedConfig = nil
+if isfile(configFile) then
+    pcall(function()
+        loadedConfig = HttpService:JSONDecode(readfile(configFile))
+        for k, v in pairs(loadedConfig) do
+            if C[k] ~= nil then
+                C[k] = v
+            end
+        end
+    end)
+end
 
 local O = {}
 getgenv().ESPObjs = O
@@ -86,6 +100,20 @@ local mathAbs = math.abs
 local mathClamp = math.clamp
 local mathSqrt = math.sqrt
 local worldToViewport = workspace.CurrentCamera.WorldToViewportPoint
+
+local function saveConfig(f)
+    local config = {}
+    for k, v in pairs(C) do
+        config[k] = v
+    end
+    config.positionXScale = f.Position.X.Scale
+    config.positionXOffset = f.Position.X.Offset
+    config.positionYScale = f.Position.Y.Scale
+    config.positionYOffset = f.Position.Y.Offset
+    pcall(function()
+        writefile(configFile, HttpService:JSONEncode(config))
+    end)
+end
 
 local function deleteAll()
     for p, o in pairs(O) do
@@ -334,6 +362,15 @@ local function ui()
     f.Draggable = true
     f.Parent = sg
     
+    if loadedConfig then
+        f.Position = UDim2.new(
+            loadedConfig.positionXScale or 0.02,
+            loadedConfig.positionXOffset or 0,
+            loadedConfig.positionYScale or 0.35,
+            loadedConfig.positionYOffset or 0
+        )
+    end
+    
     InstanceNew("UICorner", f).CornerRadius = UDim.new(0, 6)
     
     local t = InstanceNew("TextLabel")
@@ -412,10 +449,13 @@ local function ui()
         min.Text = minimized and "+" or "_"
     end)
     
-    m.MouseButton1Click:Connect(deleteAll)
+    m.MouseButton1Click:Connect(function()
+        saveConfig(f)
+        deleteAll()
+    end)
     
     sg.Parent = game:GetService("CoreGui")
-    return c
+    return c, f
 end
 
 local function tog(p, txt, def, cb)
@@ -516,7 +556,7 @@ local function sld(p, txt, min, max, def, cb)
 end
 
 -- Init UI e toggles
-local content = ui()
+local content, panelFrame = ui()
 
 tog(content, "Enabled", C.on, function(v) C.on = v end)
 tog(content, "Box", C.box, function(v) C.box = v end)
@@ -535,6 +575,31 @@ sld(content, "Thickness", 1, 3, C.thick, function(v)
         for _, l in pairs(o.s or {}) do l.Thickness = v end
         if o.h then o.h.Thickness = v end
     end
+end)
+
+-- Botão para salvar configuração
+local saveBtnFrame = InstanceNew("Frame")
+saveBtnFrame.Size = UDim2.new(1, 0, 0, 24)
+saveBtnFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+saveBtnFrame.BorderSizePixel = 0
+saveBtnFrame.Parent = content
+
+InstanceNew("UICorner", saveBtnFrame).CornerRadius = UDim.new(0, 4)
+
+local saveBtn = InstanceNew("TextButton")
+saveBtn.Size = UDim2.new(1, -12, 1, 0)
+saveBtn.Position = UDim2.new(0, 6, 0, 0)
+saveBtn.BackgroundTransparency = 1
+saveBtn.Text = "Save Config"
+saveBtn.TextColor3 = Color3.fromRGB(0, 200, 255)
+saveBtn.TextSize = 11
+saveBtn.Font = Enum.Font.GothamBold
+saveBtn.TextXAlignment = Enum.TextXAlignment.Left
+saveBtn.Parent = saveBtnFrame
+
+saveBtn.MouseButton1Click:Connect(function()
+    saveConfig(panelFrame)
+    print("Configurações salvas em " .. configFile)
 end)
 
 -- Players
